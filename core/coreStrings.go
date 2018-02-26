@@ -1,9 +1,11 @@
 package inmem
 
 import (
-	"strings"
+	"errors"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
 
 // Set sets a key to the given value.
@@ -49,5 +51,32 @@ func (im *Inmem) Append(key string, addendum string, writer io.Writer) error {
 	im.setType(key, tString)
 
 	writer.Write([]byte(fmt.Sprintf(resInt, builder.Len())))
+	return nil
+}
+
+// Incr increments an integer key by one
+func (im *Inmem) Incr(key string, writer io.Writer) error {
+	if _, err := im.validateType(key, tString, writer); err != nil {
+		return err
+	}
+
+	oldString, exists := im.strings[key];
+
+	intValue := 0
+	if exists {
+		oldInt, err := strconv.Atoi(oldString);
+		if err != nil {
+			writer.Write([]byte(errNotIntOrOutOfRange))
+			return errors.New(errNotIntOrOutOfRange)
+		}
+
+		intValue = oldInt
+	}
+
+	intValue++
+
+	im.strings[key] = strconv.Itoa(intValue)
+	writer.Write([]byte(fmt.Sprintf(resInt, intValue)))
+
 	return nil
 }

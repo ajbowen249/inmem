@@ -46,6 +46,8 @@ func (im *Inmem) Execute(rawCommand string, args []string, writer io.Writer) err
 		return im.Get(args[0], writer)
 	case cmdAppend:
 		return im.Append(args[0], args[1], writer)
+	case cmdIncr:
+		return im.Incr(args[0], writer)
 	default:
 		return unknownError(command, writer)
 	}

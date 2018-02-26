@@ -4,6 +4,7 @@ package inmem
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -94,9 +95,42 @@ func TestAppend(t *testing.T) {
 	}
 }
 
+func TestIncr(t *testing.T) {
+	nonIntError := errors.New(errNotIntOrOutOfRange)
+
+	cases := []struct {
+		hasInitialValue bool
+		initialvalue, expectedResponse string
+		expectedError error
+	}{
+		{ true, "1", "(integer) 2", nil },
+		{ true, "10", "(integer) 11", nil },
+		{ true, "0", "(integer) 1", nil },
+		{ false, "", "(integer) 1", nil },
+		{ true, "not a number", errNotIntOrOutOfRange, nonIntError },
+	}
+
+	testKey := "testKey"
+
+	for _, c := range cases {
+		inmem := NewInmem()
+		if c.hasInitialValue {
+			setString(inmem, testKey, c.initialvalue, t)
+		}
+
+		outBuffer := new(bytes.Buffer)
+		err := inmem.Execute("incr", []string{ testKey }, outBuffer);
+
+		checkResponse(outBuffer.String(), c.expectedResponse, t)
+		if c.expectedError != nil && err.Error() != c.expectedError.Error() {
+			t.Errorf("Expected error %e, got %e", c.expectedError, err)
+		}
+	}
+}
+
 func setString(inmem *Inmem, key string, value string, t *testing.T) {
 	outBuffer := new(bytes.Buffer)
-	if err := inmem.Execute("set", []string{key, value}, outBuffer); err != nil {
+	if err := inmem.Execute("set", []string{ key, value }, outBuffer); err != nil {
 		t.Errorf("Unexpected error %e", err)
 	}
 
@@ -105,7 +139,7 @@ func setString(inmem *Inmem, key string, value string, t *testing.T) {
 
 func getString(inmem *Inmem, key string, expectedResponse string, t *testing.T) {
 	outBuffer := new(bytes.Buffer)
-	if err := inmem.Execute("get", []string{key}, outBuffer); err != nil {
+	if err := inmem.Execute("get", []string{ key }, outBuffer); err != nil {
 		t.Errorf("Unexpected error %e", err)
 	}
 
@@ -114,7 +148,7 @@ func getString(inmem *Inmem, key string, expectedResponse string, t *testing.T) 
 
 func appendString(inmem *Inmem, key string, addendum string, expectedResponse string, t *testing.T) {
 	outBuffer := new(bytes.Buffer)
-	if err := inmem.Execute("append", []string{key, addendum}, outBuffer); err != nil {
+	if err := inmem.Execute("append", []string{ key, addendum }, outBuffer); err != nil {
 		t.Errorf("Unexpected error %e", err)
 	}
 
